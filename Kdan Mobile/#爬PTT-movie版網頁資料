@@ -1,0 +1,32 @@
+#爬PTT-movie版網頁資料
+install.packages("XML")
+install.packages("RCurl")
+library(RCurl)
+library(XML)
+html=getURL(url="http://www.ptt.cc/bbs/movie/index.html", httpheader = c(Accept = "text/html", MyField = "Duncan"), verbose = TRUE)
+print(html)
+
+extract = function(xml, Xpath){
+value = unlist(xml[Xpath])
+if (length(value) == 0) return(NA)
+if (class(value) != "character" ) return(sapply(xml[Xpath], xmlValue))
+return(value) }
+
+getPageData = function(url){
+html = getURL(url)
+xml = htmlParse(html)
+page_data= data.frame()
+page_data = data.frame( title = extract(xml, Xpath ="//div[@class='title']/a/text()"),
+author= extract(xml, Xpath ="//div[@class='author']//text()"),
+href = paste("http://www.ptt.cc/",extract(xml, Xpath ="//div[@class='title']/a//@href"),
+sep=""),
+date = extract(xml, Xpath ="//div[@class='date']"))
+page_data$push = sapply(1:nrow(page_data),
+function(x) extract(xml, Xpath = sprintf("//div[@class='r-ent'][%d]//span[@class='hl f2']",x)))
+return(page_data)
+}
+data = data.frame()
+for (i in 1:12){
+url = sprintf("http://www.ptt.cc/bbs/movie/index%s.html", i )
+data = rbind(data, getPageData(url))
+}
